@@ -1,0 +1,153 @@
+Yes. Since your repo test-docker is a simple HTML/CSS sample application, you can Dockerize it using Apache HTTP Server, with no Jenkins and no separate web server installation on the host.
+
+Architecture:
+
+GitHub
+  ↓
+test-docker
+  ↓
+Dockerfile
+  ↓
+Docker Image
+  ↓
+Apache container
+  ↓
+Browser → EC2 Public IP:8080
+Step 1 — Clone your GitHub repository
+
+On your Ubuntu EC2 instance:
+
+git clone https://github.com/76797185/test-docker.git
+cd test-docker
+
+Check your files:
+
+ls
+
+You should see something similar to:
+
+index.html
+about.html
+css/
+images/
+...
+Step 2 — Install Docker
+sudo apt update
+sudo apt install docker.io -y
+
+Start Docker:
+
+sudo systemctl start docker
+sudo systemctl enable docker
+
+Check:
+
+docker --version
+Step 3 — Create the Dockerfile
+
+Inside your test-docker directory:
+
+nano Dockerfile
+
+Put this:
+
+FROM httpd:2.4
+
+COPY . /usr/local/apache2/htdocs/
+
+Save:
+
+Ctrl + O → Enter → Ctrl + X
+
+This means:
+
+FROM httpd:2.4 → use Apache HTTP Server image
+COPY . /usr/local/apache2/htdocs/ → copy your HTML/CSS/images into Apache's website directory
+
+Your project should now look like:
+
+test-docker/
+├── Dockerfile
+├── index.html
+├── about.html
+├── css/
+├── images/
+└── ...
+Step 4 — Build the Docker image
+
+Run:
+
+docker build -t test-docker-app .
+
+Check the image:
+
+docker images
+
+You should see:
+
+test-docker-app
+httpd
+Step 5 — Run the Apache container
+
+Run:
+
+docker run -d -p 8080:80 --name test-docker-container test-docker-app
+
+Check:
+
+docker ps
+
+You should see something like:
+
+CONTAINER ID   IMAGE             PORTS
+xxxxxx         test-docker-app   0.0.0.0:8080->80/tcp
+
+The important part is:
+
+8080 → 80
+
+Meaning:
+
+EC2 port 8080
+       ↓
+Docker container port 80
+       ↓
+Apache
+Step 6 — Test from the EC2 machine
+
+Run:
+
+curl http://localhost:8080
+
+You should receive your HTML content.
+
+You can also check Apache logs:
+
+docker logs test-docker-container
+Step 7 — Open port 8080 in AWS
+
+Go to:
+
+EC2 → Security Groups → Inbound rules
+
+Add:
+
+Type: Custom TCP
+Port: 8080
+Source: 0.0.0.0/0
+
+For learning/testing, 0.0.0.0/0 is okay. For production, restrict the source where appropriate.
+
+Step 8 — Open your application
+
+Find your EC2 public IP.
+
+For example:
+
+54.xx.xx.xx
+
+Open:
+
+http://54.xx.xx.xx:8080
+
+Your HTML application should appear.
